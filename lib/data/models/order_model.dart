@@ -29,6 +29,41 @@ class OrderModel {
     required this.createdAt,
   });
 
+  bool get isCancelled => status.toUpperCase() == 'CANCELLED';
+
+  /// 0 Placed, 1 Packed, 2 Shipped, 3 Delivered. -1 if cancelled.
+  int get timelineStep {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return 0;
+      case 'PROCESSING':
+        return 1;
+      case 'SHIPPED':
+        return 2;
+      case 'DELIVERED':
+        return 3;
+      default:
+        return -1;
+    }
+  }
+
+  String get statusLabel {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return 'Placed';
+      case 'PROCESSING':
+        return 'Packed';
+      case 'SHIPPED':
+        return 'Shipped';
+      case 'DELIVERED':
+        return 'Delivered';
+      case 'CANCELLED':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['id'] as int?,

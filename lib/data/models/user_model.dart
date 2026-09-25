@@ -6,6 +6,7 @@ class UserModel {
   final String? token;
   final String? phoneNumber;
   final String? address;
+  final String? avatarUrl;
 
   UserModel({
     this.id,
@@ -15,9 +16,32 @@ class UserModel {
     this.token,
     this.phoneNumber,
     this.address,
+    this.avatarUrl,
   });
 
   bool get isAdmin => role.toUpperCase() == 'ADMIN';
+
+  UserModel copyWith({
+    int? id,
+    String? email,
+    String? fullName,
+    String? role,
+    String? token,
+    String? phoneNumber,
+    String? address,
+    String? avatarUrl,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
+      role: role ?? this.role,
+      token: token ?? this.token,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+    );
+  }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -28,6 +52,7 @@ class UserModel {
       token: json['token'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       address: json['address'] as String?,
+      avatarUrl: json['avatarUrl'] as String? ?? json['profileImageUrl'] as String?,
     );
   }
 
@@ -40,6 +65,7 @@ class UserModel {
       'token': token,
       'phoneNumber': phoneNumber,
       'address': address,
+      'avatarUrl': avatarUrl,
     };
   }
 }

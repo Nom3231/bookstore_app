@@ -208,34 +208,48 @@ class AdminService extends ChangeNotifier {
     }
   }
 
+  void updateRatings(int bookId, double ratingAvg, int ratingCount) {
+    final idx = _books.indexWhere((b) => b.id == bookId);
+    if (idx == -1) return;
+    _books[idx] = _books[idx].copyWith(
+      ratingAvg: double.parse(ratingAvg.toStringAsFixed(1)),
+      ratingCount: ratingCount,
+    );
+    notifyListeners();
+  }
+
   void deleteBook(int id) {
     _books.removeWhere((b) => b.id == id);
     notifyListeners();
   }
 
-  void addDemoOrder(OrderModel order) {
+  OrderModel? orderByNumber(String orderNumber) {
+    final matches = _orders.where((o) => o.orderNumber == orderNumber);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  OrderModel addDemoOrder(OrderModel order) {
     final newId = _orders.isEmpty
         ? 1
         : (_orders.map((o) => o.id ?? 0).reduce((a, b) => a > b ? a : b) + 1);
-    _orders.insert(
-      0,
-      OrderModel(
-        id: newId,
-        orderNumber: order.orderNumber,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        totalAmount: order.totalAmount,
-        shippingFee: order.shippingFee,
-        status: order.status,
-        shippingAddress: order.shippingAddress,
-        contactPhone: order.contactPhone,
-        paymentMethod: order.paymentMethod,
-        paymentStatus: order.paymentStatus,
-        trackingNumber: order.trackingNumber,
-        createdAt: order.createdAt,
-      ),
+    final created = OrderModel(
+      id: newId,
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      totalAmount: order.totalAmount,
+      shippingFee: order.shippingFee,
+      status: order.status,
+      shippingAddress: order.shippingAddress,
+      contactPhone: order.contactPhone,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      trackingNumber: order.trackingNumber,
+      createdAt: order.createdAt,
     );
+    _orders.insert(0, created);
     notifyListeners();
+    return created;
   }
 
   // Order Operations (Update Status)
@@ -243,6 +257,15 @@ class AdminService extends ChangeNotifier {
     final idx = _orders.indexWhere((o) => o.orderNumber == orderNumber);
     if (idx != -1) {
       _orders[idx].status = newStatus;
+      notifyListeners();
+    }
+  }
+
+  // User Operations
+  void addUser(UserModel user) {
+    final exists = _users.any((u) => u.email.toLowerCase() == user.email.toLowerCase());
+    if (!exists) {
+      _users.add(user);
       notifyListeners();
     }
   }

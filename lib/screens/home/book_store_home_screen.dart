@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/book_cover_image.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../data/models/book_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/services/admin_service.dart';
@@ -33,6 +34,7 @@ class _BookStoreHomeScreenState extends State<BookStoreHomeScreen> {
 
   final List<String> _categories = [
     'All',
+    'New Arrivals',
     'Computer Science',
     'Fiction & Literature',
     'Business & Finance',
@@ -82,9 +84,13 @@ class _BookStoreHomeScreenState extends State<BookStoreHomeScreen> {
   Widget build(BuildContext context) {
     final books = _adminService.books;
     final bestsellers = books.where((b) => b.isBestseller).toList();
+    final newArrivals = books.where((b) => b.isNewArrival).toList();
     final filteredBooks = books.where((b) {
-      final matchesCategory =
-          _selectedCategory == 'All' || b.genreName == _selectedCategory;
+      final matchesCategory = _selectedCategory == 'All'
+          ? true
+          : _selectedCategory == 'New Arrivals'
+              ? b.isNewArrival
+              : b.genreName == _selectedCategory;
       final matchesSearch =
           _searchQuery.isEmpty ||
           b.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -113,111 +119,112 @@ class _BookStoreHomeScreenState extends State<BookStoreHomeScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.surfaceHighlight,
-                      child: Text(
-                        widget.currentUser.fullName.isNotEmpty
-                            ? widget.currentUser.fullName[0].toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          color: AppColors.primaryRedLight,
-                          fontWeight: FontWeight.w800,
+                child: AnimatedBuilder(
+                  animation: AuthService(),
+                  builder: (context, _) {
+                    final user = AuthService().currentUser ?? widget.currentUser;
+                    return Row(
+                      children: [
+                        UserAvatar(
+                          imageUrl: user.avatarUrl,
+                          name: user.fullName,
+                          radius: 22,
                           fontSize: 16,
+                          onTap: () {
+                            setState(() => _currentNavIndex = 3);
+                          },
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Good day,',
-                            style: TextStyle(
-                              color: AppColors.textMuted.withValues(alpha: 0.9),
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            widget.currentUser.fullName,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (widget.currentUser.isAdmin)
-                      InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AdminDashboardScreen(
-                                currentUser: widget.currentUser,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryRedMuted,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.primaryRedDark,
-                              width: 0.8,
-                            ),
-                          ),
-                          child: const Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.admin_panel_settings_rounded,
-                                size: 14,
-                                color: AppColors.primaryRedLight,
-                              ),
-                              SizedBox(width: 4),
                               Text(
-                                'ADMIN',
+                                'Good day,',
                                 style: TextStyle(
-                                  color: AppColors.primaryRedLight,
-                                  fontSize: 11,
+                                  color: AppColors.textMuted.withValues(alpha: 0.9),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                user.fullName,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Sign Out',
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: AppColors.textSecondary,
-                        size: 20,
-                      ),
-                      onPressed: () async {
-                        await AuthService().logout();
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
+                        if (user.isAdmin)
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AdminDashboardScreen(
+                                    currentUser: user,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryRedMuted,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.primaryRedDark,
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.admin_panel_settings_rounded,
+                                    size: 14,
+                                    color: AppColors.primaryRedLight,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'ADMIN',
+                                    style: TextStyle(
+                                      color: AppColors.primaryRedLight,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
+                          ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'Sign Out',
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            await AuthService().logout();
+                            if (context.mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -471,6 +478,89 @@ class _BookStoreHomeScreenState extends State<BookStoreHomeScreen> {
                       return _BookCoverCard(
                         book: b,
                         onTap: () => _openBook(b),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+
+            // New Arrivals Section Header & List
+            if (_searchQuery.isEmpty && newArrivals.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'New Arrivals',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Text(
+                              'FRESH RELEASES',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() => _selectedCategory = 'New Arrivals'),
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            color: AppColors.primaryRedLight,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // New Arrivals Horizontal Cards
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 155,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: newArrivals.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 12),
+                    itemBuilder: (ctx, i) {
+                      final b = newArrivals[i];
+                      return _NewArrivalCard(
+                        book: b,
+                        onTap: () => _openBook(b),
+                        onAddToCart: () => _addToCart(b),
                       );
                     },
                   ),
@@ -926,6 +1016,224 @@ class _BookCoverCard extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// New Arrival Landscape Card
+class _NewArrivalCard extends StatelessWidget {
+  final BookModel book;
+  final VoidCallback onTap;
+  final VoidCallback onAddToCart;
+
+  const _NewArrivalCard({
+    required this.book,
+    required this.onTap,
+    required this.onAddToCart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 290,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderSubtle, width: 1),
+        ),
+        child: Row(
+          children: [
+            // Cover with "NEW" badge
+            Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: BookCoverImage(
+                    imageUrl: book.coverImageUrl,
+                    width: 85,
+                    height: 130,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'NEW',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+
+            // Info Column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Genre & Year Badge
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            book.genreName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (book.publishedYear != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '${book.publishedYear}',
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Title
+                  Text(
+                    book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+
+                  // Author
+                  Text(
+                    book.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const Spacer(),
+
+                  // Price, Rating & Add to cart
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '\$${book.price.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: AppColors.primaryRedLight,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 12,
+                                color: Color(0xFFFFB800),
+                              ),
+                              Text(
+                                ' ${book.ratingAvg}',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: onAddToCart,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryRedMuted,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.primaryRedDark.withValues(alpha: 0.6),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.add_shopping_cart_rounded,
+                            size: 14,
+                            color: AppColors.primaryRedLight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

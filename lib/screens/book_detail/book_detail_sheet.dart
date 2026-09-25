@@ -4,8 +4,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/book_cover_image.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../data/models/book_model.dart';
+import '../../data/models/review_model.dart';
+import '../../data/services/admin_service.dart';
+import '../../data/services/auth_service.dart';
 import '../../data/services/cart_service.dart';
+import '../../data/services/review_service.dart';
 import '../../data/services/wishlist_service.dart';
+import 'write_review_dialog.dart';
 
 class BookDetailSheet extends StatelessWidget {
   final BookModel book;
@@ -161,31 +166,43 @@ class BookDetailSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFFFB800),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          book.ratingAvg.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${book.ratingCount} reviews)',
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                    AnimatedBuilder(
+                      animation: Listenable.merge([
+                        ReviewService(),
+                        AdminService(),
+                      ]),
+                      builder: (context, _) {
+                        final matches = AdminService().books
+                            .where((b) => b.id == book.id);
+                        final shown =
+                            matches.isEmpty ? book : matches.first;
+                        return Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFFFB800),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              shown.ratingAvg.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${shown.ratingCount} reviews)',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -224,27 +241,97 @@ class BookDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Synopsis & Overview',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
           Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                book.description.isNotEmpty
-                    ? book.description
-                    : 'A compelling literary masterwork showcasing exceptional writing, thought-provoking insights, and lasting thematic resonance.',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13.5,
-                  height: 1.55,
-                ),
-              ),
+            child: AnimatedBuilder(
+              animation: ReviewService(),
+              builder: (context, _) {
+                final reviews = ReviewService().forBook(book.id);
+                final user = AuthService().currentUser;
+                final alreadyReviewed =
+                    ReviewService().hasReviewed(book.id, user?.email);
+
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Synopsis & Overview',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        book.description.isNotEmpty
+                            ? book.description
+                            : 'A compelling literary masterwork showcasing exceptional writing, thought-provoking insights, and lasting thematic resonance.',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13.5,
+                          height: 1.55,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          Text(
+                            'Ratings & reviews (${reviews.length})',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: alreadyReviewed
+                                ? null
+                                : () async {
+                                    final posted = await WriteReviewDialog.show(
+                                      context,
+                                      book,
+                                    );
+                                    if (posted && context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Review posted'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            child: Text(
+                              alreadyReviewed ? 'Reviewed' : 'Write review',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (reviews.isEmpty)
+                        const Text(
+                          'No reviews yet. Be the first to rate this title.',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
+                        )
+                      else
+                        ...reviews.map(
+                          (review) => _ReviewCard(
+                            review: review,
+                            currentEmail: user?.email,
+                            onLike: () {
+                              if (user == null) return;
+                              ReviewService().toggleLike(review.id, user.email);
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 18),
@@ -354,6 +441,144 @@ class _SpecColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final ReviewModel review;
+  final String? currentEmail;
+  final VoidCallback onLike;
+
+  const _ReviewCard({
+    required this.review,
+    required this.currentEmail,
+    required this.onLike,
+  });
+
+  String _timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays >= 30) return '${(diff.inDays / 30).floor()}mo ago';
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final liked = review.isLikedBy(currentEmail);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.surfaceHighlight,
+                child: Text(
+                  review.userName.isNotEmpty
+                      ? review.userName[0].toUpperCase()
+                      : 'U',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    color: AppColors.primaryRed,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.userName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      _timeAgo(review.createdAt),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: const Color(0xFFFFB800),
+                  );
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            review.comment,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13.5,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: onLike,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    liked
+                        ? Icons.thumb_up_alt_rounded
+                        : Icons.thumb_up_alt_outlined,
+                    size: 16,
+                    color: liked
+                        ? AppColors.primaryRed
+                        : AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    review.likeCount == 0
+                        ? 'Like'
+                        : '${review.likeCount}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: liked
+                          ? AppColors.primaryRed
+                          : AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_picker_sheet.dart';
 import '../../core/widgets/custom_text_field.dart';
 import '../../core/widgets/primary_button.dart';
-import '../../core/widgets/social_auth_button.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../data/services/auth_service.dart';
 import 'widgets/brand_header.dart';
 import '../home/book_store_home_screen.dart';
@@ -20,9 +21,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  String? _avatarUrl;
   String _selectedRole = 'CUSTOMER'; // 'CUSTOMER' or 'ADMIN'
   bool _agreeToTerms = false;
   bool _isLoading = false;
@@ -43,9 +47,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _chooseAvatar() async {
+    final result = await AvatarPickerSheet.show(
+      context,
+      currentUrl: _avatarUrl,
+    );
+    if (result != null) {
+      setState(() {
+        _avatarUrl = result.isNotEmpty ? result : null;
+      });
+    }
   }
 
   Future<void> _handleRegister() async {
@@ -69,6 +87,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailController.text.trim(),
       password: _passwordController.text,
       role: _selectedRole,
+      address: _addressController.text.trim(),
+      avatarUrl: _avatarUrl,
+      phoneNumber: _phoneController.text.trim(),
     );
 
     if (!mounted) return;
@@ -174,6 +195,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Profile Picture Selector
+                    Center(
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.primaryRed.withValues(alpha: 0.5),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: UserAvatar(
+                                  imageUrl: _avatarUrl,
+                                  name: _nameController.text.isNotEmpty
+                                      ? _nameController.text
+                                      : 'New User',
+                                  radius: 38,
+                                  fontSize: 26,
+                                  onTap: _chooseAvatar,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: InkWell(
+                                  onTap: _chooseAvatar,
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryRed,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.surface,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          TextButton(
+                            onPressed: _chooseAvatar,
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              foregroundColor: AppColors.primaryRedLight,
+                            ),
+                            child: Text(
+                              _avatarUrl != null
+                                  ? 'Change Profile Photo'
+                                  : 'Add Profile Photo (Optional)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // Error Banner
                     if (_errorMessage != null) ...[
                       Container(
@@ -204,7 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
                     ],
 
                     // Full Name
@@ -213,6 +306,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: 'Isaac Newton',
                       controller: _nameController,
                       prefixIcon: Icons.badge_outlined,
+                      onChanged: (_) => setState(() {}),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
                           return 'Please enter your full name';
@@ -241,6 +335,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Delivery / Shipping Address
+                    CustomTextField(
+                      label: 'Delivery / Shipping Address',
+                      hintText: 'e.g. 24 Maple Street, Apt 4B, New York',
+                      controller: _addressController,
+                      prefixIcon: Icons.location_on_outlined,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Please enter your delivery address';
+                        }
+                        if (val.trim().length < 5) {
+                          return 'Please enter a complete delivery address';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Phone Number
+                    CustomTextField(
+                      label: 'Phone Number (Optional)',
+                      hintText: '+234 809 000 0000',
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      prefixIcon: Icons.phone_outlined,
                     ),
                     const SizedBox(height: 16),
 
@@ -392,75 +514,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _handleRegister,
                     ),
                     const SizedBox(height: 24),
-
-                    // Divider
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Divider(color: AppColors.borderSubtle),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Text(
-                            'OR SIGN UP WITH',
-                            style: TextStyle(
-                              color: const Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          child: Divider(color: AppColors.borderSubtle),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Social Sign Up Buttons
-                    Row(
-                      children: [
-                        SocialAuthButton(
-                          provider: SocialProvider.google,
-                          onPressed: () {
-                            _nameController.text = 'Google User';
-                            _emailController.text = 'google.user@example.com';
-                            _passwordController.text = 'GooglePass#123';
-                            _confirmPasswordController.text = 'GooglePass#123';
-                            _agreeToTerms = true;
-                            setState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Google profile details populated',
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 14),
-                        SocialAuthButton(
-                          provider: SocialProvider.apple,
-                          onPressed: () {
-                            _nameController.text = 'Apple User';
-                            _emailController.text = 'apple.user@example.com';
-                            _passwordController.text = 'ApplePass#123';
-                            _confirmPasswordController.text = 'ApplePass#123';
-                            _agreeToTerms = true;
-                            setState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Apple profile details populated',
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
 
                     // Sign In Link
                     Center(

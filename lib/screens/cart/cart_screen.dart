@@ -6,7 +6,9 @@ import '../../core/widgets/primary_button.dart';
 import '../../data/models/order_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/services/admin_service.dart';
+import '../../data/services/auth_service.dart';
 import '../../data/services/cart_service.dart';
+import '../orders/order_tracking_screen.dart';
 
 class CartScreen extends StatelessWidget {
   final UserModel currentUser;
@@ -171,18 +173,23 @@ class CartScreen extends StatelessWidget {
                       text: 'Place order (demo)',
                       icon: Icons.lock_outline_rounded,
                       onPressed: () {
-                        AdminService().addDemoOrder(
+                        final user = AuthService().currentUser ?? currentUser;
+                        final placed = AdminService().addDemoOrder(
                           OrderModel(
                             orderNumber:
                                 'ORD-${DateTime.now().millisecondsSinceEpoch % 100000}',
-                            customerName: currentUser.fullName,
-                            customerEmail: currentUser.email,
+                            customerName: user.fullName,
+                            customerEmail: user.email,
                             totalAmount: cart.subtotal,
-                            status: 'PROCESSING',
+                            status: 'PENDING',
                             shippingAddress:
-                                currentUser.address ?? 'Address on file',
+                                (user.address != null && user.address!.trim().isNotEmpty)
+                                    ? user.address!
+                                    : 'Address on file',
                             contactPhone:
-                                currentUser.phoneNumber ?? 'Not provided',
+                                (user.phoneNumber != null && user.phoneNumber!.trim().isNotEmpty)
+                                    ? user.phoneNumber!
+                                    : 'Not provided',
                             paymentMethod: 'DEMO CARD',
                             paymentStatus: 'PAID (DEMO)',
                             trackingNumber:
@@ -191,12 +198,9 @@ class CartScreen extends StatelessWidget {
                           ),
                         );
                         cart.clear();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Order placed. Payment was not processed.',
-                            ),
-                          ),
+                        Navigator.push(
+                          context,
+                          OrderTrackingScreen.route(placed.orderNumber),
                         );
                       },
                     ),

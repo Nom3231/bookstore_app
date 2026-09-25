@@ -56,7 +56,7 @@ class BookCoverImage extends StatelessWidget {
         height: h.isFinite ? h : null,
         fit: fit,
         alignment: Alignment.topCenter,
-        filterQuality: FilterQuality.high,
+        filterQuality: FilterQuality.medium,
         isAntiAlias: true,
         cacheWidth: cacheW,
         gaplessPlayback: true,

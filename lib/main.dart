@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/services/auth_service.dart';
+import 'data/services/review_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/book_store_home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
@@ -9,6 +10,7 @@ import 'screens/admin/admin_dashboard_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService().init();
+  ReviewService();
   runApp(const BookStoreApp());
 }
 

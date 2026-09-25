@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 
-class AuthService {
+import 'admin_service.dart';
+
+class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
@@ -33,6 +35,7 @@ class AuthService {
         _currentUser = UserModel.fromJson(
           jsonDecode(userRaw) as Map<String, dynamic>,
         );
+        notifyListeners();
       } catch (e) {
         await prefs.remove('user_session');
       }
@@ -71,7 +74,8 @@ class AuthService {
             await prefs.setString('auth_token', user.token!);
           }
         }
-        return (success: true, message: 'Welcome back, !', user: user);
+        notifyListeners();
+        return (success: true, message: 'Welcome back, ${user.fullName}!', user: user);
       } else {
         final err = jsonDecode(response.body) as Map<String, dynamic>;
         final msg =
@@ -108,6 +112,8 @@ class AuthService {
       fullName: capitalizedName,
       role: isAdmin ? 'ADMIN' : 'CUSTOMER',
       token: 'demo-mock-jwt-token-',
+      address: isAdmin ? 'Aptech Headquarters, Tech Park' : null,
+      phoneNumber: '+234 809 876 5432',
     );
 
     _currentUser = user;
@@ -115,6 +121,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_session', jsonEncode(user.toJson()));
     }
+    notifyListeners();
 
     return (
       success: true,
@@ -130,8 +137,14 @@ class AuthService {
     required String email,
     required String password,
     String role = 'CUSTOMER',
+    String? address,
+    String? avatarUrl,
+    String? phoneNumber,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    final cleanAddress = (address != null && address.trim().isNotEmpty) ? address.trim() : null;
+    final cleanAvatar = (avatarUrl != null && avatarUrl.trim().isNotEmpty) ? avatarUrl.trim() : null;
+    final cleanPhone = (phoneNumber != null && phoneNumber.trim().isNotEmpty) ? phoneNumber.trim() : null;
 
     // 1. Try Java Spring Boot backend
     try {
@@ -145,6 +158,9 @@ class AuthService {
               'email': cleanEmail,
               'password': password,
               'role': role,
+              'address': cleanAddress,
+              'avatarUrl': cleanAvatar,
+              'phoneNumber': cleanPhone,
             }),
           )
           .timeout(const Duration(seconds: 3));
@@ -153,8 +169,10 @@ class AuthService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final user = UserModel.fromJson(data);
         _currentUser = user;
+        AdminService().addUser(user);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_session', jsonEncode(user.toJson()));
+        notifyListeners();
         return (
           success: true,
           message: 'Account registered successfully!',
@@ -180,11 +198,16 @@ class AuthService {
       fullName: fullName.trim(),
       role: role.toUpperCase(),
       token: 'demo-mock-jwt-token-${DateTime.now().millisecondsSinceEpoch}',
+      address: cleanAddress,
+      avatarUrl: cleanAvatar,
+      phoneNumber: cleanPhone,
     );
 
     _currentUser = user;
+    AdminService().addUser(user);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_session', jsonEncode(user.toJson()));
+    notifyListeners();
 
     return (
       success: true,
@@ -192,6 +215,32 @@ class AuthService {
       user: user,
     );
   }
+
+  /// Update user profile details (Name, Phone, Address, Avatar)
+  Future<({bool success, String message})> updateProfile({
+    String? fullName,
+    String? phoneNumber,
+    String? address,
+    String? avatarUrl,
+  }) async {
+    if (_currentUser == null) {
+      return (success: false, message: 'No active session found.');
+    }
+
+    _currentUser = _currentUser!.copyWith(
+      fullName: (fullName != null && fullName.trim().isNotEmpty) ? fullName.trim() : _currentUser!.fullName,
+      phoneNumber: phoneNumber,
+      address: address,
+      avatarUrl: avatarUrl,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_session', jsonEncode(_currentUser!.toJson()));
+    notifyListeners();
+
+    return (success: true, message: 'Profile updated successfully!');
+  }
+
 
   /// Password reset request
   Future<({bool success, String message})> forgotPassword(String email) async {
@@ -228,5 +277,6 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_session');
     await prefs.remove('auth_token');
+    notifyListeners();
   }
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_text_field.dart';
 import '../../core/widgets/primary_button.dart';
-import '../../core/widgets/social_auth_button.dart';
 import '../../data/services/auth_service.dart';
 import 'forgot_password_sheet.dart';
 import 'register_screen.dart';
@@ -326,68 +325,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.login_rounded,
                       onPressed: _handleLogin,
                     ),
-                    const SizedBox(height: 24),
-
-                    // Divider
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Divider(color: AppColors.borderSubtle),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Text(
-                            'OR CONTINUE WITH',
-                            style: TextStyle(
-                              color: const Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          child: Divider(color: AppColors.borderSubtle),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Social Sign In Buttons
-                    Row(
-                      children: [
-                        SocialAuthButton(
-                          provider: SocialProvider.google,
-                          onPressed: () {
-                            _fillCredentials(
-                              'isaac.google@example.com',
-                              'password123',
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Google Sign-In demo filled'),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 14),
-                        SocialAuthButton(
-                          provider: SocialProvider.apple,
-                          onPressed: () {
-                            _fillCredentials(
-                              'isaac.apple@example.com',
-                              'password123',
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Apple Sign-In demo filled'),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
                     // Sign Up Link
                     Center(

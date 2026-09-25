@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../data/models/book_model.dart';
 import '../../data/models/order_model.dart';
 import '../../data/models/user_model.dart';
@@ -393,7 +394,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Order \${order.orderNumber} updated to \$newStatus',
+                  'Order ${order.orderNumber} updated to $newStatus',
                 ),
                 backgroundColor: AppColors.surfaceElevated,
               ),
@@ -423,20 +424,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           child: Row(
             children: [
-              CircleAvatar(
+              UserAvatar(
+                imageUrl: u.avatarUrl,
+                name: u.fullName,
                 radius: 20,
+                fontSize: 14,
                 backgroundColor: u.isAdmin
                     ? AppColors.primaryRedMuted
                     : AppColors.surfaceHighlight,
-                child: Text(
-                  u.fullName.isNotEmpty ? u.fullName[0].toUpperCase() : 'U',
-                  style: TextStyle(
-                    color: u.isAdmin
-                        ? AppColors.primaryRedLight
-                        : AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                foregroundColor: u.isAdmin
+                    ? AppColors.primaryRedLight
+                    : AppColors.textPrimary,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -713,7 +711,7 @@ class _BookAdminCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '\${book.stockQuantity} in stock',
+                        '${book.stockQuantity} in stock',
                         style: TextStyle(
                           color: isLowStock
                               ? AppColors.error
@@ -854,7 +852,7 @@ class _OrderAdminCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '\${order.customerName} • \${order.contactPhone}',
+            '${order.customerName} • ${order.contactPhone}',
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
